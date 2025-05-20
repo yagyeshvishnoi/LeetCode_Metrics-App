@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LeetMetric</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      background-color: #f5f5f5;
+    }
+
+    header {
+      background-color: #282c34;
+      color: white;
+      padding: 1.5rem 0;
+      font-size: 2rem;
+    }
+
+    .search-container {
+      margin: 2rem 0;
+    }
+
+    input[type="text"] {
+      padding: 0.5rem;
+      width: 250px;
+      font-size: 1rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      margin-left: 10px;
+      border: none;
+      border-radius: 5px;
+      background-color: #4caf50;
+      color: white;
+      cursor: pointer;
+    }
+
+    .circle-container {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+
+    .circle {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background-color: #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: white;
+    }
+
+    .easy { background-color: #8bc34a; }
+    .medium { background-color: #ff9800; }
+    .hard { background-color: #f44336; }
+
+    .box-container {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+
+    .box {
+      background-color: white;
+      border: 1px solid #ccc;
+      padding: 1.5rem;
+      width: 150px;
+      font-size: 1.2rem;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+
+    .heatmap {
+      display: grid;
+      grid-template-columns: repeat(35, 12px);
+      justify-content: center;
+      gap: 3px;
+      margin: 2rem auto;
+      max-width: 90%;
+    }
+
+    .heatmap-cell {
+      width: 12px;
+      height: 12px;
+      background-color: #eee;
+    }
+
+    .heatmap-cell[data-count="1"] { background-color: #c6e48b; }
+    .heatmap-cell[data-count="2"] { background-color: #7bc96f; }
+    .heatmap-cell[data-count="3"] { background-color: #239a3b; }
+    .heatmap-cell[data-count="4"] { background-color: #196127; }
+    .heatmap-cell[data-count="5"] { background-color: #0f4211; }
+  </style>
+</head>
+<body>
+  <header>LeetMetric</header>
+
+  <div class="search-container">
+    <input type="text" id="text" placeholder="Enter username" />
+    <button id="search">Search</button>
+  </div>
+
+  <div class="circle-container">
+    <div class="circle easy">Easy: 0</div>
+    <div class="circle medium">Medium: 0</div>
+    <div class="circle hard">Hard: 0</div>
+  </div>
+
+  <div class="box-container">
+    <div class="box" id="totalBox">Total: 0</div>
+    <div class="box" id="rankBox">Rank: -</div>
+    <div class="box" id="AcceptanceRateBox">AcceptanceRate: 0</div>
+  </div>
+
+  <h3>Submission Activity (Past ~6 Weeks)</h3>
+  <div class="heatmap" id="heatmap"></div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      let search = document.querySelector("#search");
+      let text = document.querySelector("#text");
+      let easy = document.querySelector(".circle.easy");
+      let med = document.querySelector(".circle.medium");
+      let hard = document.querySelector(".circle.hard");
+
+      let totalBox = document.querySelector("#totalBox");
+      let rankBox = document.querySelector("#rankBox");
+      let AcceptanceRateBox = document.querySelector("#AcceptanceRateBox");
+      let heatmap = document.querySelector("#heatmap");
+
+      search.addEventListener("click", () => {
+        let username = text.value.trim();
+        if (username) {
+          getData(username);
+        } else {
+          alert("Please enter a username");
+        }
+      });
+
+      async function getData(username) {
+        try {
+          let response = await fetch(`https://leetcode-stats-api.herokuapp.com/${username}`);
+          if (!response.ok) throw new Error("Response was not OK.");
+          let data = await response.json();
+
+          easy.textContent = `Easy: ${data.easySolved}`;
+          med.textContent = `Medium: ${data.mediumSolved}`;
+          hard.textContent = `Hard: ${data.hardSolved}`;
+          totalBox.textContent = `Total: ${data.totalSolved}`;
+          rankBox.textContent = `Rank: ${data.ranking}`;
+          AcceptanceRateBox.textContent = `AcceptanceRate: ${data.acceptanceRate}`;
+
+          drawHeatmap(data.submissionCalendar);
+        } catch (error) {
+          console.error("Error fetching data:", error.message);
+          alert("Failed to fetch data. Make sure the username is correct.");
+        }
+      }
+
+      function drawHeatmap(submissions) {
+        heatmap.innerHTML = "";
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const oneDay = 86400000;
+
+        for (let i = 41; i >= 0; i--) {
+          const date = new Date(today - i * oneDay);
+          const ts = Math.floor(date.getTime() / 1000);
+          const count = submissions[ts] || 0;
+
+          const cell = document.createElement("div");
+          cell.classList.add("heatmap-cell");
+          if (count > 0) {
+            cell.dataset.count = Math.min(count, 5); // max 5 for coloring
+          }
+          cell.title = `${date.toDateString()} - ${count} submission(s)`;
+          heatmap.appendChild(cell);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
